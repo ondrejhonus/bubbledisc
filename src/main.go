@@ -2,30 +2,28 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
-	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/lipgloss"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 type track struct {
-	title string
+	title    string
 	duration string
-	index   int
+	index    int
 }
 
 func (t track) Title() string       { return fmt.Sprintf("Track %02d", t.index+1) }
 func (t track) Description() string { return fmt.Sprintf("%s (%s)", t.title, t.duration) }
 func (t track) FilterValue() string { return t.title }
 
-var titleStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))
-
 type model struct {
-	list     list.Model
-	selected bool
+	list   list.Model
+	width  int
+	height int
 }
 
 func initialModel() model {
@@ -34,15 +32,10 @@ func initialModel() model {
 		track{title: "Fake Song B", duration: "4:20", index: 1},
 		track{title: "Fake Song C", duration: "2:58", index: 2},
 	}
-
-	l := list.New(items, list.NewDefaultDelegate(), 40, 10)
-	l.Title = "📀 Inserted CD — Track List"
-	l.SetShowHelp(true)
-
-	return model{
-		list:     l,
-		selected: false,
-	}
+	l := list.New(items, list.NewDefaultDelegate(), 0, 0)
+	l.Title = "📀 CD Contents"
+	l.SetShowHelp(false)
+	return model{list: l}
 }
 
 func (m model) Init() tea.Cmd {
@@ -51,28 +44,26 @@ func (m model) Init() tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		m.list.SetSize(msg.Width, msg.Height)
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "enter":
-			if !m.selected {
-				item := m.list.SelectedItem().(track)
-				playTrack(item.index + 1)
-				m.selected = true
-				return m, nil
+			if t, ok := m.list.SelectedItem().(track); ok {
+				playTrack(t.index + 1)
 			}
 		}
 	}
-	newList, cmd := m.list.Update(msg)
-	m.list = newList
+	var cmd tea.Cmd
+	m.list, cmd = m.list.Update(msg)
 	return m, cmd
 }
 
 func (m model) View() string {
-	if m.selected {
-		return titleStyle.Render("▶️  Playing track... Press q to quit.") + "\n"
-	}
 	return m.list.View()
 }
 
@@ -80,14 +71,13 @@ func playTrack(trackNum int) {
 	cmd := exec.Command("mpv", fmt.Sprintf("cdda:// --cdrom-device=/dev/sr0 --track=%d", trackNum))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	_ = cmd.Start() // Run in background
+	_ = cmd.Start() // Run without waiting
 }
 
 func main() {
-	p := tea.NewProgram(initialModel())
-	if err := p.Start(); err != nil {
-		fmt.Println("Error running program:", err)
-		os.Exit(1)
+	p := tea.NewProgram(initialModel(), tea.WithAltScreen(), tea.WithoutBracketedPaste())
+
+	if _, err := p.Run(); err != nil {
+		log.Fatal(err)
 	}
 }
-
