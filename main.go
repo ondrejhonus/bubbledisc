@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
-	"os/exec"
+	"strings"
+
+	"github.com/ondrejhonus/bubbledisc/utils"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type track struct {
@@ -20,10 +22,13 @@ func (t track) Title() string       { return fmt.Sprintf("Track %02d", t.index+1
 func (t track) Description() string { return fmt.Sprintf("%s (%s)", t.title, t.duration) }
 func (t track) FilterValue() string { return t.title }
 
+var titleStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))
+
 type model struct {
-	list   list.Model
-	width  int
-	height int
+	list     list.Model
+	width    int
+	height   int
+	selected bool
 }
 
 func initialModel() model {
@@ -54,7 +59,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "enter":
 			if t, ok := m.list.SelectedItem().(track); ok {
-				playTrack(t.index + 1)
+				utils.PlayTrack(t.index + 1)
 			}
 		}
 	}
@@ -64,14 +69,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	return m.list.View()
-}
+	var b strings.Builder
 
-func playTrack(trackNum int) {
-	cmd := exec.Command("mpv", fmt.Sprintf("cdda:// --cdrom-device=/dev/sr0 --track=%d", trackNum))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	_ = cmd.Start() // Run without waiting
+	if m.selected {
+		b.WriteString(titleStyle.Render("▶️  Playing track... Press q to quit.") + "\n")
+	} else {
+		b.WriteString(m.list.View())
+		b.WriteString("\n")
+		b.WriteString(utils.HelpBar())
+	}
+
+	return b.String()
 }
 
 func main() {
