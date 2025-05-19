@@ -9,29 +9,22 @@ import (
 )
 
 type Track struct {
-	Title    string
+	Name     string
 	Duration string
 	Index    int
 }
 
-func (t Track) Name() string        { return fmt.Sprintf("Track %02d", t.Index+1) }
-func (t Track) Description() string { return fmt.Sprintf("%s (%s)", t.Title, t.Duration) }
-func (t Track) FilterValue() string { return t.Title }
+func (t Track) Title() string       { return fmt.Sprintf("Track %02d", t.Index+1) }
+func (t Track) Description() string { return fmt.Sprintf("%s (%s)", t.Name, t.Duration) }
+func (t Track) FilterValue() string { return t.Name }
 
 var TitleStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))
 
-type Model struct {
-	List     list.Model
-	Width    int
-	Height   int
-	Selected bool
-}
-
 func InitialModel() Model {
 	items := []list.Item{
-		Track{Title: "Fake Song A", Duration: "3:45", Index: 0},
-		Track{Title: "Fake Song B", Duration: "4:20", Index: 1},
-		Track{Title: "Fake Song C", Duration: "2:58", Index: 2},
+		Track{Name: "Citizens Of Earth", Duration: "2:40", Index: 0},
+		Track{Name: "Threat Level Midnight", Duration: "2:46", Index: 1},
+		Track{Name: "Can't Kick Up The Roots", Duration: "2:49", Index: 2},
 	}
 	l := list.New(items, list.NewDefaultDelegate(), 0, 0)
 	l.Title = "📀 CD Contents"

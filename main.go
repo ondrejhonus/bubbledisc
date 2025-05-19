@@ -2,18 +2,23 @@ package main
 
 import (
 	"log"
+	"os/exec"
 	"strings"
 
 	"github.com/ondrejhonus/bubbledisc/utils"
 
+	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type localModel struct {
-	utils.Model
+type Model struct {
+	List     list.Model
+	Width    int
+	Height   int
+	Selected bool
 }
 
-func (m localModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
@@ -22,10 +27,11 @@ func (m localModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
+			exec.Command("killall", "mpv")
 			return m, tea.Quit
 		case "enter":
 			if t, ok := m.List.SelectedItem().(utils.Track); ok {
-				utils.PlayTrack(t.Index + 1)
+				utils.PlayTrack(&m, t.Index)
 			}
 		}
 	}
@@ -34,7 +40,7 @@ func (m localModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m localModel) View() string {
+func (m Model) View() string {
 	var b strings.Builder
 
 	if m.Selected {
@@ -49,7 +55,7 @@ func (m localModel) View() string {
 }
 
 func main() {
-	p := tea.NewProgram(localModel{Model: utils.InitialModel()}, tea.WithAltScreen(), tea.WithoutBracketedPaste())
+	p := tea.NewProgram(utils.InitialModel(), tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
