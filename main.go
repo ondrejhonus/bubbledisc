@@ -5,20 +5,17 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/ondrejhonus/bubbledisc/share"
 	"github.com/ondrejhonus/bubbledisc/utils"
 
-	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type Model struct {
-	List     list.Model
-	Width    int
-	Height   int
-	Selected bool
+type localModel struct {
+	utils.Model
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m localModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
@@ -27,11 +24,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
-			exec.Command("killall", "mpv")
+			exec.Command("pkill", "mpv")
 			return m, tea.Quit
 		case "enter":
-			if t, ok := m.List.SelectedItem().(utils.Track); ok {
-				utils.PlayTrack(&m, t.Index)
+			if !m.Selected {
+				SelectedIndex := m.List.Index()
+				items := m.List.Items()
+
+				for i := range items {
+					t := items[i].(utils.Track)
+					t.Playing = (i == SelectedIndex)
+					items[i] = t
+				}
+
+				m.List.SetItems(items)
+
+				item := items[SelectedIndex].(utils.Track)
+				share.PlayTrack(item.Index)
+				// m.Selected = true
+				return m, nil
 			}
 		}
 	}
@@ -40,7 +51,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) View() string {
+func (m localModel) View() string {
 	var b strings.Builder
 
 	if m.Selected {
@@ -48,14 +59,14 @@ func (m Model) View() string {
 	} else {
 		b.WriteString(m.List.View())
 		b.WriteString("\n")
-		b.WriteString(utils.HelpBar())
+		b.WriteString(share.HelpBar())
 	}
 
 	return b.String()
 }
 
 func main() {
-	p := tea.NewProgram(utils.InitialModel(), tea.WithAltScreen())
+	p := tea.NewProgram(localModel{Model: utils.InitialModel()}, tea.WithoutBracketedPaste(), tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)

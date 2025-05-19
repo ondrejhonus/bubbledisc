@@ -3,8 +3,6 @@ package share
 import (
 	"os/exec"
 
-	"github.com/ondrejhonus/bubbledisc/utils"
-
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -14,7 +12,7 @@ func HelpBar() string {
 		Render("j/k: up/down • Enter: Play • q: Quit")
 }
 
-func PlayTrack(m *utils.Model, trackNum int) {
+func PlayTrack(trackNum int) {
 	// cmd := exec.Command("mpv", fmt.Sprintf("cdda:// --cdrom-device=/dev/sr0 --track=%d", trackNum))
 	// cmd := exec.Command("mpv", "--no-video", "https://www.youtube.com/watch?v=HzZGLOfIxkM")
 	var cmd *exec.Cmd
@@ -25,9 +23,9 @@ func PlayTrack(m *utils.Model, trackNum int) {
 		cmd = exec.Command("mpv", "--no-video", "https://www.youtube.com/watch?v=uIJdDAFTkqA")
 	case 2:
 		cmd = exec.Command("mpv", "--no-video", "https://www.youtube.com/watch?v=Qv0XH2qgGyY")
-		m.Selected = true
 	}
 	// cmd.Stdout = os.Stdout
 	// cmd.Stderr = os.Stderr
 	_ = cmd.Start()
+
 }

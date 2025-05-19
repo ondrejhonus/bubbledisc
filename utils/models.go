@@ -12,9 +12,27 @@ type Track struct {
 	Name     string
 	Duration string
 	Index    int
+	Playing  bool
 }
 
-func (t Track) Title() string       { return fmt.Sprintf("Track %02d", t.Index+1) }
+type Model struct {
+	List         list.Model
+	Width        int
+	Height       int
+	Selected     bool
+	PlayingIndex int
+}
+
+func (t Track) Title() string {
+	label := fmt.Sprintf("Track %02d", t.Index+1)
+	if t.Playing {
+		return lipgloss.NewStyle().
+			Foreground(lipgloss.Color("42")). // green
+			Bold(true).
+			Render("▶ " + label)
+	}
+	return label
+}
 func (t Track) Description() string { return fmt.Sprintf("%s (%s)", t.Name, t.Duration) }
 func (t Track) FilterValue() string { return t.Name }
 
@@ -29,7 +47,10 @@ func InitialModel() Model {
 	l := list.New(items, list.NewDefaultDelegate(), 0, 0)
 	l.Title = "📀 CD Contents"
 	l.SetShowHelp(false)
-	return Model{List: l}
+	return Model{
+		List:         l,
+		PlayingIndex: -1,
+	}
 }
 
 func (m Model) Init() tea.Cmd {
